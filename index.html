@@ -1,103 +1,86 @@
-<!DOCTYPE html>
-<html lang="nl">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MysticAI</title>
-<style>
-  html, body {
-    height: 100%;
-    margin: 0; padding: 0;
-    overflow: hidden;
-  }
-  #JotformAgent-019909a46d9a7a51b11e5434738d8a7c0df1 {
-    position: fixed !important;
-    top: 0 !important; left: 0 !important;
-    width: 100vw !important; height: 100vh !important;
-    z-index: 9999 !important;
-    background: linear-gradient(180deg, #001fed 0%, #000000 100%) !important;
-    border-radius: 0 !important;
-  }
-  /* Verberg watermark/foto */
-  a[href*="jotform"], .jf-footer, .jf-watermark, .jf-poweredby,
-  .jf-chat-header img, .jf-chat-avatar, img[alt="Agent Photo"] {
-    display: none !important;
-  }
-  .jf-chat-header {
-    padding-left: 0 !important;
-  }
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MysticAI — Hacker Terminal</title>
+  <style>
+    body {
+      margin:0; background:#000; color:#0f0;
+      font-family:"Courier New", monospace;
+      display:flex; flex-direction:column;
+      height:100vh;
+    }
+    header {
+      background:#050; color:#0f0;
+      padding:10px; font-weight:bold;
+      text-align:center; border-bottom:2px solid #0f0;
+      box-shadow:0 0 20px #0f0;
+    }
+    #status {
+      font-size:12px; color:#6f6;
+    }
+    #log {
+      flex:1; overflow:auto;
+      padding:12px; background:#010;
+      font-size:14px; line-height:1.4;
+    }
+    .user { color:#9f9; }
+    .ai { color:#0f0; }
+    #controls {
+      display:flex; border-top:2px solid #0f0;
+    }
+    #prompt {
+      flex:1; padding:10px;
+      background:#000; color:#0f0;
+      border:none; outline:none;
+      font-family:inherit; font-size:14px;
+    }
+    #send {
+      padding:10px 20px;
+      background:#050; color:#0f0;
+      border:none; cursor:pointer;
+      font-family:inherit;
+    }
+    #load {
+      margin:10px; padding:6px 12px;
+      background:#111; color:#0f0;
+      border:none; cursor:pointer;
+      font-size:14px;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    MysticAI — Hacker Terminal
+    <div id="status">idle</div>
+  </header>
 
-<div id="JotformAgent-019909a46d9a7a51b11e5434738d8a7c0df1"></div>
+  <div style="text-align:center; padding:6px;">
+    <button id="load">Load Model</button>
+  </div>
 
-<script>
-(async () => {
-  const src = "https://eu.jotform.com/s/umd/c6384de9fd3/for-embedded-agent.js";
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  script.onload = function() {
-    window.AgentInitializer.init({
-      agentRenderURL: "https://eu.jotform.com/agent/019909a46d9a7a51b11e5434738d8a7c0df1",
-      rootId: "JotformAgent-019909a46d9a7a51b11e5434738d8a7c0df1",
-      formID: "019909a46d9a7a51b11e5434738d8a7c0df1",
-      contextID: "019909abe8da74b89b6cfeb885996b6852f1",
-      initialContext: "",
-      queryParams: ["skipWelcome=1","maximizable=1"],
-      domain: "https://eu.jotform.com",
-      isDraggable: false,
-      background: "linear-gradient(180deg, #001fed 0%, #000000 100%)",
-      buttonBackgroundColor: "#0066C3",
-      buttonIconColor: "#FFFFFF",
-      inputTextColor: "#394ec3",
-      variant: false,
-      customizations: {
-        greeting:"Yes",
-        greetingMessage:"Hi! How can I assist you?",
-        openByDefault:"No",
-        pulse:"Yes",
-        position:"right",
-        autoOpenChatIn:"1",
-        layout:"minimal"
-      },
-      isVoice: false,
-      isVoiceWebCallEnabled: true
-    });
+  <div id="log">
+    <div class="ai">[ System Booted — MysticAI Online ]</div>
+    <div class="ai">Click "Load Model" before chatting...</div>
+  </div>
 
-    // Fix positie van de open knop zodra die er is
-    const fixOpenButtonPosition = () => {
-      const btn = document.querySelector('.jf-chat-open-button');
-      if (btn) {
-        btn.style.position = 'fixed';
-        btn.style.bottom = '0';
-        btn.style.right = '0';
-        btn.style.margin = '0';
-        btn.style.padding = '0';
-        btn.style.zIndex = '10000';
-        btn.style.width = '56px';
-        btn.style.height = '56px';
-        btn.style.borderRadius = '50%';
-        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-        return true;
-      }
-      return false;
-    };
+  <div id="controls">
+    <input id="prompt" placeholder=">_" />
+    <button id="send">Run</button>
+  </div>
 
-    // Probeer meteen
-    if (!fixOpenButtonPosition()) {
-      // Wacht tot knop geladen is (max 5 sec)
-      const interval = setInterval(() => {
-        if (fixOpenButtonPosition()) clearInterval(interval);
-      }, 100);
-      setTimeout(() => clearInterval(interval), 5000);
+  <!-- Load transformers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js"></script>
+  <script>
+    let pipeline=null;
+    const log=document.getElementById("log");
+
+    function msg(text,cls){
+      const d=document.createElement("div");
+      d.textContent=text; d.className=cls;
+      log.appendChild(d); log.scrollTop=log.scrollHeight;
     }
-  };
-  document.head.appendChild(script);
-})();
-</script>
 
-</body>
-</html>
-html>
+    document.getElementById("load").onclick=async()=>{
+      msg("[ Loading AI model... may take time on first l]()
