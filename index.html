@@ -70,17 +70,63 @@
     <button id="send">Run</button>
   </div>
 
-  <!-- Load transformers.js -->
+  <!-- transformers.js -->
   <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js"></script>
   <script>
-    let pipeline=null;
-    const log=document.getElementById("log");
+    let pipeline = null;
+    const log = document.getElementById("log");
+    const status = document.getElementById("status");
 
-    function msg(text,cls){
-      const d=document.createElement("div");
-      d.textContent=text; d.className=cls;
-      log.appendChild(d); log.scrollTop=log.scrollHeight;
+    function msg(text, cls) {
+      const d = document.createElement("div");
+      d.textContent = text;
+      if (cls) d.className = cls;
+      log.appendChild(d);
+      log.scrollTop = log.scrollHeight;
     }
 
-    document.getElementById("load").onclick=async()=>{
-      msg("[ Loading AI model... may take time on first l]()
+    async function loadModel() {
+      msg("[ Loading AI model... may take time on first load ]","ai");
+      status.textContent = "loading...";
+      try {
+        pipeline = await window.transformers.pipeline("text-generation", "Xenova/distilgpt2");
+        msg("[ Model loaded. You may begin. ]","ai");
+        status.textContent = "ready";
+      } catch (err) {
+        msg("[ Error loading model: "+err.message+" ]","ai");
+        status.textContent = "error";
+      }
+    }
+
+    async function runPrompt() {
+      if (!pipeline) {
+        msg("[ Load the model first! ]","ai");
+        return;
+      }
+      const q = document.getElementById("prompt").value.trim();
+      if (!q) return;
+      msg("> "+q,"user");
+      document.getElementById("prompt").value = "";
+      msg("[thinking...]","ai");
+      try {
+        const out = await pipeline(q, { max_length: 80, temperature: 0.8 });
+        log.lastChild.remove(); // remove "[thinking...]"
+        let reply = out[0].generated_text.replace(q,"").trim();
+        msg(reply,"ai");
+      } catch (err) {
+        log.lastChild.remove();
+        msg("[ Generation error: "+err.message+" ]","ai");
+      }
+    }
+
+    // Attach events AFTER page loads
+    window.onload = () => {
+      document.getElementById("load").onclick = loadModel;
+      document.getElementById("send").onclick = runPrompt;
+      document.getElementById("prompt").addEventListener("keydown", e => {
+        if (e.key === "Enter") runPrompt();
+      });
+    };
+  </script>
+</body>
+</html>
